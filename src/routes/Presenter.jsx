@@ -134,7 +134,7 @@ export default function Presenter() {
                   {s.text && <span>{s.text}</span>}
                   {s.image && (
                     <img
-                      src={`http://localhost:3000${s.image}`}
+                      src={`https://rogersrounds-server.onrender.com${s.image}`}
                       alt={`Step ${i + 1}`}
                       style={{
                         maxWidth: "250px",

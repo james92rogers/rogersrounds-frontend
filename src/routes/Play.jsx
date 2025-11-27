@@ -136,34 +136,56 @@ export default function Play() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Player</h2>
-
-      {!joined ? (
-        <div>
+      {!joined && (
+        <div className="flex flex-col items-center gap-2">
+          <p>Welcome to Rogers Room</p>
+          <img
+            src="/images/rogersroundslogo.png"
+            alt="Rogers Rounds Logo"
+            style={{ width: 200 }}
+          />
           <input
+            className="border p-2 rounded w-48 text-center"
             placeholder="Room code"
             value={room}
             onChange={(e) => setRoom(e.target.value.toUpperCase())}
           />
           <input
+            className="border p-2 rounded w-48 text-center"
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <button onClick={join}>Join</button>
-        </div>
-      ) : (
-        <div>
-          Joined room {room} as {name}
+          <button className="w-40 h-10 rounded-3xl" onClick={join}>
+            Join
+          </button>
         </div>
       )}
 
-      <div style={{ marginTop: 12 }}>
+      {joined && !currentQuestion && (
+        <div className="flex flex-col items-center gap-2">
+          <p>
+            Joined room {room} as {name}
+          </p>
+          <img
+            src="/images/rogersroundslogo2.png"
+            alt="Rogers Rounds Logo"
+            style={{ width: 200 }}
+          />
+          <p>Please be patient while your host starts the game</p>
+          <p className="text-center">
+            Don't let your phone sleep, else you will be kicked from the room
+          </p>
+        </div>
+      )}
+
+      {/* <div style={{ marginTop: 12 }}>
         <strong>Status:</strong> {status}
-      </div>
+      </div> */}
 
       {currentQuestion && (
         <div style={{ marginTop: 20 }}>
+          <h3>Question:</h3>
           <h3>{currentQuestion.question}</h3>
 
           {/* Multiple-choice answers */}
@@ -178,11 +200,11 @@ export default function Play() {
                     display: "block",
                     margin: "6px 0",
                     padding: "10px",
-                    background: selectedAnswer === c ? "#333" : "#555",
+                    background: selectedAnswer === c ? "#53b8f8ff" : "#1a6cff",
                     border:
                       selectedAnswer === c
-                        ? "2px solid yellow"
-                        : "1px solid #222",
+                        ? "2px solid white"
+                        : "2px solid #144ba0",
                     color: "white",
                     cursor: submitted ? "default" : "pointer",
                   }}
@@ -190,30 +212,36 @@ export default function Play() {
                   {c}
                 </button>
               ))}
+              <div className="mt-4">
+                <Timer secondsLeft={tick} />
+              </div>
             </div>
           )}
 
           {/* Buzzer button */}
-          {currentQuestion.type === "buzzer" && (
-            <button
-              style={{
-                marginTop: 12,
-                background: buzzLocked ? "#888" : "#ff5555",
-                cursor: buzzLocked ? "not-allowed" : "pointer",
-                padding: "12px 24px",
-                fontSize: "1.2rem",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-              }}
-              onClick={buzz}
-              disabled={buzzLocked}
-            >
-              Buzz!
-            </button>
+          {currentQuestion.type !== "mc" && (
+            <div className="flex flex-col items-center h-100 justify-center">
+              <button
+                style={{
+                  background: buzzLocked ? "#888" : "#ff5555",
+                  cursor: buzzLocked ? "not-allowed" : "pointer",
+                  padding: "12px 24px",
+                  fontSize: "5rem",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  height: "200px",
+                  width: "300px",
+                }}
+                onClick={buzz}
+                disabled={buzzLocked}
+              >
+                Buzz!
+              </button>
+            </div>
           )}
 
-          {currentQuestion?.type === "sequence" && (
+          {/* {currentQuestion?.type === "sequence" || && (
             <div style={{ marginTop: 12 }}>
               <button
                 onClick={buzz}
@@ -239,9 +267,9 @@ export default function Play() {
                 </div>
               )}
             </div>
-          )}
+          )} */}
 
-          <Timer secondsLeft={tick} show={currentQuestion.type === "mc"} />
+          {/* <Timer secondsLeft={tick} show={currentQuestion.type === "mc"} /> */}
         </div>
       )}
     </div>

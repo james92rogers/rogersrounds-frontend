@@ -18,7 +18,8 @@ export default function Host() {
   const [postRoundMode, setPostRoundMode] = useState(false);
   const [allAnswered, setAllAnswered] = useState(false);
   const [revealError, setRevealError] = useState("");
-  const [sequenceSteps, setSequenceSteps] = useState([]); // revealed steps
+  const [sequenceSteps, setSequenceSteps] = useState([]);
+  const [gameStarted, setGameStarted] = useState(false);
 
   // ---------- Socket events ----------
   useEffect(() => {
@@ -87,9 +88,7 @@ export default function Host() {
     });
 
     socket.on("hostBuzzerQuestionStarted", ({ question }) => {
-      // `question` contains correctAnswer (private) — merge into currentQuestion
       setCurrentQuestion((prev) => ({ ...(prev || {}), ...question }));
-      // ensure tick stops/cleared locally
       setTick(null);
       setShowAnswer(false);
       setScoreOverrides({});
@@ -207,31 +206,51 @@ export default function Host() {
     });
   };
 
+  const startGame = () => {
+    setRevealError("");
+    if (players.length < 1) {
+      setRevealError("At least 2 players are required to start the game.");
+      return;
+    } else if (players.length > 8) {
+      setRevealError("A maximum of 8 players are allowed to start the game.");
+      return;
+    }
+    setGameStarted(true);
+  };
+
   const hasPlayers = room && players.length > 0;
 
   // ---------- Render ----------
   return (
     <div style={{ padding: 20 }}>
-      <h2>Host</h2>
-      <div>
-        <button onClick={createRoom}>Create Room</button>
-        <span style={{ marginLeft: 10 }}>
-          {room ? `Room: ${room}` : "No room"}
-        </span>
-      </div>
+      {!room && (
+        <div className="flex flex-col items-center gap-2">
+          <p>Welcome to Rogers Room</p>
+          <img
+            src="/images/rogersroundslogo.png"
+            alt="Rogers Rounds Logo"
+            style={{ width: 200 }}
+          />
+          <p>Please create a room to begin</p>
+          <button className="w-40 h-10 rounded-3xl" onClick={createRoom}>
+            Create Room
+          </button>
+        </div>
+      )}
 
-      {hasPlayers && (
-        <>
-          <div style={{ marginTop: 12 }}>
+      {gameStarted && hasPlayers && (
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2">
             <label>
               Round type:{" "}
               <select
                 value={roundType}
                 onChange={(e) => setRoundType(e.target.value)}
               >
-                <option value="mc">MC Round</option>
+                <option value="mc">Multi-Choice Round</option>
                 <option value="buzzer">Buzzer Round</option>
-                <option value="sequence">Sequence Round</option>
+                <option value="sequence">Complete the Sequence</option>
+                <option value="link">Guess the Link</option>
               </select>
             </label>
 
@@ -246,27 +265,33 @@ export default function Host() {
               />
             </label>
 
-            <button style={{ marginLeft: 10 }} onClick={loadQuestions}>
+            <button className="w-40 h-10 rounded-3xl" onClick={loadQuestions}>
               Load Questions
             </button>
 
             {loadedQuestions.length > 0 && !round && (
-              <button style={{ marginLeft: 10 }} onClick={startRound}>
+              <button className="w-40 h-10 rounded-3xl" onClick={startRound}>
                 Start Round
               </button>
             )}
           </div>
 
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-5 flex flex-col items-center gap-2">
             {!currentQuestion &&
               loadedQuestions.length > 0 &&
               round &&
               !postRoundMode && (
-                <button onClick={startNextQuestion}>Start Next Question</button>
+                <button
+                  className="w-40 h-10 rounded-3xl"
+                  onClick={startNextQuestion}
+                >
+                  Start Next Question
+                </button>
               )}
 
             {currentQuestion && !showAnswer && (
               <button
+                className="w-40 h-10 rounded-3xl"
                 onClick={revealAnswer}
                 disabled={
                   currentQuestion?.buzzer ? false : !allAnswered && tick > 0
@@ -288,8 +313,9 @@ export default function Host() {
               </button>
             )}
 
-            {currentQuestion?.type === "sequence" && (
-              <div style={{ marginTop: 12 }}>
+            {(currentQuestion?.type === "sequence" ||
+              currentQuestion?.type === "link") && (
+              <div className="mt-5 flex flex-col items-center gap-2">
                 <p>
                   Steps revealed: {sequenceSteps.length} /{" "}
                   {currentQuestion.steps.length}
@@ -297,11 +323,17 @@ export default function Host() {
 
                 {!showAnswer &&
                   sequenceSteps.length < currentQuestion.steps.length && (
-                    <button onClick={revealNextStep}>Reveal Next Step</button>
+                    <button
+                      className="w-40 h-10 rounded-3xl"
+                      onClick={revealNextStep}
+                    >
+                      Reveal Next Step
+                    </button>
                   )}
 
                 {!showAnswer && (
                   <button
+                    className="w-40 h-10 rounded-3xl"
                     onClick={revealSequenceAnswer}
                     style={{ marginLeft: 8 }}
                   >
@@ -316,13 +348,14 @@ export default function Host() {
             )}
 
             {showAnswer && currentQuestion && (
-              <>
+              <div className="mt-5 flex flex-col items-center gap-2">
                 <div>
                   {players.map((p) => (
                     <div key={p.sid}>
                       {p.name}:
                       <input
                         type="number"
+                        className="appearance-auto"
                         step={10}
                         value={scoreOverrides[p.sid] ?? 0}
                         onChange={(e) =>
@@ -335,82 +368,124 @@ export default function Host() {
                     </div>
                   ))}
                 </div>
-                <button onClick={confirmScores}>Confirm Scores</button>
-              </>
+                <button
+                  className="w-40 h-10 rounded-3xl"
+                  onClick={confirmScores}
+                >
+                  Confirm Scores
+                </button>
+              </div>
             )}
 
             {roundFinished && !postRoundMode && (
-              <div style={{ marginTop: 12 }}>
-                <button onClick={endRound}>End Round</button>
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <button className="w-40 h-10 rounded-3xl" onClick={endRound}>
+                  End Round
+                </button>
               </div>
             )}
 
             {postRoundMode && (
-              <div style={{ marginTop: 12 }}>
-                <button onClick={showFullLeaderboard}>
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <button
+                  className="w-70 h-10 rounded-3xl"
+                  onClick={showFullLeaderboard}
+                >
                   Show Full Leaderboard
                 </button>
-                <button onClick={endShow} style={{ marginLeft: 8 }}>
+                <button
+                  className="w-40 h-10 rounded-3xl"
+                  onClick={endShow}
+                  style={{ marginLeft: 8 }}
+                >
                   End Show
                 </button>
               </div>
             )}
 
-            {round?.type === "buzzer" ||
-              (round?.type === "sequence" && (
-                <>
-                  <button onClick={resetBuzzer}>Reset Buzzer</button>
-                  <button onClick={lockoutLastBuzzer}>Lock Last Buzzer</button>
-                  <button onClick={dontLockoutLastBuzzer}>
-                    Resume Without Lockout
-                  </button>
-                </>
-              ))}
+            {(round?.type === "buzzer" ||
+              round?.type === "sequence" ||
+              round?.type === "link") && (
+              <div className="mt-5 flex flex-col items-center gap-2">
+                <button className="w-40 h-10 rounded-3xl" onClick={resetBuzzer}>
+                  Reset Buzzer
+                </button>
+                <button
+                  className="w-40 h-10 rounded-3xl"
+                  onClick={lockoutLastBuzzer}
+                >
+                  Lock Last Buzzer
+                </button>
+                <button
+                  className="w-60 h-10 rounded-3xl"
+                  onClick={dontLockoutLastBuzzer}
+                >
+                  Resume Without Lockout
+                </button>
+              </div>
+            )}
           </div>
-        </>
+        </div>
+      )}
+
+      {gameStarted && hasPlayers && (
+        <div className="mt-5 flex flex-col items-center gap-2">
+          {currentQuestion && (
+            <div>
+              <h3>Current Question</h3>
+
+              {allAnswered && currentQuestion && (
+                <p className="mb-5">All players have answered.</p>
+              )}
+              <div>
+                <strong>{currentQuestion.question}</strong>
+              </div>
+              {currentQuestion.type !== "mc" ? (
+                <div>Answer: {currentQuestion.answer}</div>
+              ) : (
+                <Timer secondsLeft={tick} />
+              )}
+            </div>
+          )}
+          <h3>Players:</h3>
+          <ul>
+            {players.map((p) => (
+              <li key={p.sid}>{p.name}</li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div style={{ marginTop: 18 }}>
-        <h3>Current Question</h3>
-
-        {allAnswered && currentQuestion && (
-          <div style={{ marginBottom: 10, color: "green" }}>
-            All players have answered.
-          </div>
-        )}
-
-        {currentQuestion ? (
-          <div>
-            <div>
-              <strong>{currentQuestion.question}</strong>
-            </div>
-            <div>Type: {currentQuestion.type}</div>
-            {currentQuestion.type === "buzzer" && (
-              <div>Answer: {currentQuestion.answer}</div>
+        {room && !gameStarted && (
+          <div className="flex flex-col items-center gap-2">
+            <p>Room Code: {room}</p>
+            <img
+              src="/images/rogersroundslogo.png"
+              alt="Rogers Rounds Logo"
+              style={{ width: 200 }}
+            />
+            <h3>Players:</h3>
+            <div className="border-b border-white w-50" />
+            {!players.length && <p>No players joined yet</p>}
+            <ul>
+              {players.map((p) => (
+                <li key={p.sid}>{p.name}</li>
+              ))}
+            </ul>
+            <div className="border-b border-white w-50" />
+            <p className="mb-5">{players.length} / 8</p>
+            <a href={`/presenter?room=${room}`} target="_blank" rel="noopener">
+              Open Presenter View at rogersrounds.netlify.app/presenter?room=
+              {room}
+            </a>
+            <button className="w-40 h-10 rounded-3xl" onClick={startGame}>
+              Start Game
+            </button>
+            {revealError && (
+              <div style={{ color: "red", marginTop: 6 }}>{revealError}</div>
             )}
-            <Timer secondsLeft={tick} />
           </div>
-        ) : (
-          <div>No active question</div>
-        )}
-      </div>
-
-      <div style={{ marginTop: 18 }}>
-        <h3>Players</h3>
-        <ul>
-          {players.map((p) => (
-            <li key={p.sid}>
-              {p.name} — {p.score}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div style={{ marginTop: 18 }}>
-        {room && (
-          <a href={`/presenter?room=${room}`} target="_blank" rel="noopener">
-            Open Presenter View
-          </a>
         )}
       </div>
     </div>
